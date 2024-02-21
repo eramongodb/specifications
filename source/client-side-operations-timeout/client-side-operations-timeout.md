@@ -88,13 +88,13 @@ progresses.
 The `timeoutMS` option applies to all operations defined in the following specifications:
 
 - [CRUD](./../crud/crud.rst)
-- [Change Streams](../change-streams/change-streams.rst)
+- [Change Streams](../change-streams/change-streams.md)
 - [Client Side Encryption](../client-side-encryption/client-side-encryption.rst)
 - [Enumerating Collections](../enumerate-collections.rst)
 - [Enumerating Databases](../enumerate-databases.rst)
 - [GridFS](../gridfs/gridfs-spec.rst)
 - [Index Management](../index-management/index-management.rst)
-- [Transactions](../transactions/transactions.rst)
+- [Transactions](../transactions/transactions.md)
 - [Convenient API for Transactions](../transactions-convenient-api/transactions-convenient-api.rst)
 
 In addition, it applies to all operations on cursor objects that may perform blocking work (e.g. methods to iterate or
@@ -429,9 +429,7 @@ See [runCommand behavior](#runcommand-behavior).
 
 ## Test Plan
 
-See the
-[README.rst](https://github.com/mongodb/specifications/blob/master/source/client-side-operations-timeout/tests/README.rst)
-in the tests directory.
+See the [README.rst](tests/README.md) in the tests directory.
 
 ## Motivation for Change
 
