@@ -185,14 +185,15 @@ Span kind MUST be "client".
 
 Spans SHOULD have the following attributes:
 
-| Attribute              | Type     | Description                                                                | Requirement Level     |
-| :--------------------- | :------- | :------------------------------------------------------------------------- | :-------------------- |
-| `db.system.name`       | `string` | MUST be 'mongodb'                                                          | Required              |
-| `db.namespace`         | `string` | The database name                                                          | Required if available |
-| `db.collection.name`   | `string` | The collection being accessed within the database stated in `db.namespace` | Required if available |
-| `db.operation.name`    | `string` | The name of the driver operation being executed                            | Required              |
-| `db.operation.summary` | `string` | Equivalent to span name                                                    | Required              |
-| `db.mongodb.cursor_id` | `int64`  | If a cursor is created or used in the operation (see below)                | Conditional           |
+| Attribute              | Type     | Description                                                                | Requirement Level               |
+| :--------------------- | :------- | :------------------------------------------------------------------------- | :------------------------------ |
+| `db.system.name`       | `string` | MUST be 'mongodb'                                                          | Required                        |
+| `db.namespace`         | `string` | The database name                                                          | Required if available           |
+| `db.collection.name`   | `string` | The collection being accessed within the database stated in `db.namespace` | Required if available           |
+| `db.operation.name`    | `string` | The name of the driver operation being executed                            | Required                        |
+| `db.operation.summary` | `string` | Equivalent to span name                                                    | Required                        |
+| `db.mongodb.cursor_id` | `int64`  | If a cursor is created or used in the operation (see below)                | Conditional                     |
+| `error.type`           | `string` | (see [error.type](#errortype-operation-spans) below)                       | Required if the operation fails |
 
 Not all attributes are available at the moment of span creation. Drivers need to add attributes at later stages, which
 requires an operation span to be available throughout the complete operation lifecycle.
@@ -251,6 +252,13 @@ if available:
 - `exception.type`
 - `exception.stacktrace`
 
+###### error.type (operation spans)
+
+Operation spans MUST NOT have an `error.type` attribute when the operation succeeds, even if one of its commands failed:
+an operation can succeed through a retry, so a failed command's `error.type` does not carry over. Drivers MUST add this
+attribute to the span when the operation itself fails. Its value SHOULD be the name of the exception class raised to the
+application, the same value as the operation span's `exception.type` attribute above.
+
 #### Instrumenting Server Commands
 
 Drivers MUST create a span for every server command sent to the server as a result of a public API call, except for
@@ -272,23 +280,24 @@ Span kind MUST be "client".
 
 Spans SHOULD have the following attributes:
 
-| Attribute                         | Type     | Description                                                                                                                                              | Requirement Level            |
-| :-------------------------------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------- |
-| `db.system.name`                  | `string` | MUST be 'mongodb'                                                                                                                                        | Required                     |
-| `db.namespace`                    | `string` | The database name                                                                                                                                        | Required if available        |
-| `db.collection.name`              | `string` | The collection being accessed within the database stated in `db.namespace`                                                                               | Required if available        |
-| `db.command.name`                 | `string` | The name of the server command being executed                                                                                                            | Required                     |
-| `db.response.status_code`         | `string` | MongoDB error code represented as a string. This attribute should be added only if an error happens.                                                     | Required if an error happens |
-| `server.port`                     | `int64`  | Server port number                                                                                                                                       | Required                     |
-| `server.address`                  | `string` | Name of the database host, or IP address if name is not known                                                                                            | Required                     |
-| `network.transport`               | `string` | MUST be 'tcp' or 'unix' depending on the protocol                                                                                                        | Required                     |
-| `db.query.summary`                | `string` | (see explanation below)                                                                                                                                  | Required                     |
-| `db.mongodb.server_connection_id` | `int64`  | Server connection id                                                                                                                                     | Required if available        |
-| `db.mongodb.driver_connection_id` | `int64`  | Local connection id                                                                                                                                      | Required if available        |
-| `db.query.text`                   | `string` | Database command that was sent to the server. Content should be equivalent to the `document` field of the CommandStartedEvent of the command monitoring. | Conditional                  |
-| `db.mongodb.cursor_id`            | `int64`  | If a cursor is created or used in the command (see below)                                                                                                | Conditional                  |
-| `db.mongodb.lsid`                 | `string` | Logical session id                                                                                                                                       | Required if available        |
-| `db.mongodb.txn_number`           | `int64`  | Transaction number                                                                                                                                       | Required if available        |
+| Attribute                         | Type     | Description                                                                                                                                              | Requirement Level             |
+| :-------------------------------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------- |
+| `db.system.name`                  | `string` | MUST be 'mongodb'                                                                                                                                        | Required                      |
+| `db.namespace`                    | `string` | The database name                                                                                                                                        | Required if available         |
+| `db.collection.name`              | `string` | The collection being accessed within the database stated in `db.namespace`                                                                               | Required if available         |
+| `db.command.name`                 | `string` | The name of the server command being executed                                                                                                            | Required                      |
+| `db.response.status_code`         | `string` | MongoDB error code represented as a string. This attribute should be added only if an error happens.                                                     | Required if an error happens  |
+| `error.type`                      | `string` | (see [error.type](#errortype-command-spans) below)                                                                                                       | Required if the command fails |
+| `server.port`                     | `int64`  | Server port number                                                                                                                                       | Required                      |
+| `server.address`                  | `string` | Name of the database host, or IP address if name is not known                                                                                            | Required                      |
+| `network.transport`               | `string` | MUST be 'tcp' or 'unix' depending on the protocol                                                                                                        | Required                      |
+| `db.query.summary`                | `string` | (see explanation below)                                                                                                                                  | Required                      |
+| `db.mongodb.server_connection_id` | `int64`  | Server connection id                                                                                                                                     | Required if available         |
+| `db.mongodb.driver_connection_id` | `int64`  | Local connection id                                                                                                                                      | Required if available         |
+| `db.query.text`                   | `string` | Database command that was sent to the server. Content should be equivalent to the `document` field of the CommandStartedEvent of the command monitoring. | Conditional                   |
+| `db.mongodb.cursor_id`            | `int64`  | If a cursor is created or used in the command (see below)                                                                                                | Conditional                   |
+| `db.mongodb.lsid`                 | `string` | Logical session id                                                                                                                                       | Required if available         |
+| `db.mongodb.txn_number`           | `int64`  | Transaction number                                                                                                                                       | Required if available         |
 
 Besides the attributes listed in the table above, drivers MAY add other attributes from the
 [Semantic Conventions for Databases](https://opentelemetry.io/docs/specs/semconv/registry/attributes/db/) that are
@@ -374,6 +383,22 @@ available:
 - `exception.message`
 - `exception.type`
 - `exception.stacktrace`
+
+###### error.type (command spans)
+
+Drivers MUST add this attribute to the command span when the command fails. This attribute SHOULD match
+`db.response.status_code` when the command failed with a server error, meaning the server returned an error code in its
+response. Otherwise, this attribute SHOULD be the name of the exception class associated with that command's failure,
+whether or not the operation ultimately raises it to the application: a retry of the same operation may still succeed.
+
+Drivers MUST NOT set this attribute when the command succeeds. Per the
+[OpenTelemetry semantic conventions for `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/#error-type),
+this attribute SHOULD have a low cardinality, because tracing backends use it as a dimension for grouping and alerting
+on failures.
+
+`error.type` is the OpenTelemetry semantic-convention attribute for this purpose, and the name tracing backends
+recognize for it. `exception.type` (see the exception attributes above) is not part of that convention, even though
+drivers also add it to the span. For a non-server error, `error.type` carries the same value as `exception.type`.
 
 #### Propagating Trace Context to the Server
 
@@ -527,14 +552,24 @@ redesigning the payload format.
 
 ## Changelog
 
+- 2026-08-19: Specified the `error.type` attribute on command spans, which drivers MUST add when a command fails and
+    which matches `db.response.status_code` when the command failed with a server error and is otherwise the name of the
+    exception class associated with that command's failure. Specified that drivers MUST NOT set it when the command
+    succeeds, that it SHOULD have a low cardinality, and that operation spans MUST NOT carry it unless the operation
+    itself fails, in which case it matches the operation span's `exception.type`.
+
 - 2026-08-11: Specified that each `getMore` command is nested under its own new operation span, sibling to the operation
     span of the command that created the cursor, when the caller drives cursor iteration. Specified that
     `db.mongodb.cursor_id` MUST be added to operation spans and to command spans that create a cursor with a non-zero id
     or that operate on a single existing cursor, and MUST be omitted rather than set to `0` when no server-side cursor
     remains.
+
 - 2026-07-31: Allowed the `update` test to accept `multi` and `upsert` at their default values, and added `initialData`
     to the operation tests that create or modify collections.
+
 - 2026-07-21: Add trace context propagation to the server via the `OP_MSG` telemetry section (DRIVERS-3454).
+
 - 2026-06-16: Clarified that the `db.query.text` attribute should be serialized to Relaxed Extended JSON.
+
 - 2026-02-09: Renamed `db.system` to `db.system.name` according to the corresponding update of OpenTelemetry semantic
     conventions.

@@ -90,6 +90,32 @@ asserts the stronger claim that the value equals the id the driver sent, which n
 5. Assert that both the `getMore` operation span and the `getMore` command span have a `db.mongodb.cursor_id` attribute
     whose value equals the cursor id recorded in step 3.
 
+*Test 5: `error.type` is the exception class name for a non-server error*
+
+The unified fixture [tests/operation/error_type.yml](operation/error_type.yml) asserts that `error.type` is a string on
+both the command and operation spans for a non-server error, but matching cannot compare two observed attributes. This
+test asserts the value the fixture cannot: `error.type` equals the `exception.type` recorded on the same span, the
+exception class name.
+
+1. Create a `MongoClient` with tracing enabled and `retryReads` disabled.
+2. Configure a `failCommand` fail point on `find` with `closeConnection: true`.
+3. Call `find` on a test collection and let it fail.
+4. Assert that the command span's `error.type` attribute equals its `exception.type` attribute.
+5. Assert that the operation span's `error.type` attribute equals its `exception.type` attribute.
+
+*Test 6: `error.type` on the operation span is the exception class name for a server error*
+
+The unified fixture's server-error case asserts only that the operation span's `error.type` is a string, since matching
+cannot compare one observed attribute against another, or assert that it differs from the command span's server error
+code. The specification recommends that the operation span's `error.type` be the exception class name, not the server
+error code. This test asserts both.
+
+1. Create a `MongoClient` with tracing enabled.
+2. Configure a `failCommand` fail point on `find` with a non-retryable `errorCode`.
+3. Call `find` on a test collection and let it fail.
+4. Assert that the operation span's `error.type` attribute equals its `exception.type` attribute, and that both differ
+    from the `db.response.status_code` attribute on the `find` command span.
+
 #### Server Trace Context Propagation
 
 The following tests verify that servers join the driver's distributed trace (see
@@ -118,7 +144,7 @@ Reading server spans:
 - Select only spans whose `traceId` matches a span emitted by the test's own `MongoClient`; the directory may contain
     spans from other tests or from the server's internal sampling.
 
-*Test 5: Server spans join the driver's trace*
+*Test 7: Server spans join the driver's trace*
 
 1. Create a `MongoClient` with tracing enabled, connected to the deployment described above.
 2. Perform an `insertOne` operation on a test collection and record the driver's **command span** for the resulting
@@ -128,7 +154,7 @@ Reading server spans:
 4. Assert that exactly one such server span exists for the `insert` command and that its `parentSpanId` equals the
     driver command span's `spanId`.
 
-*Test 6: One server span per retry attempt*
+*Test 8: One server span per retry attempt*
 
 This test uses a retryable read so that it runs on all topologies, including standalone (retryable writes require a
 replica set or sharded cluster).
@@ -160,7 +186,7 @@ replica set or sharded cluster).
 
 6. Disable the failpoint.
 
-*Test 7: No trace context for authentication and monitoring commands*
+*Test 9: No trace context for authentication and monitoring commands*
 
 1. Create a `MongoClient` with tracing enabled against a deployment that requires authentication.
 2. Perform a `find` operation on a test collection, so that connection handshakes, authentication (e.g.
